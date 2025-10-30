@@ -173,6 +173,7 @@
         <div class="device-info">
             <p><span class="info-label">Device ID:</span> <span class="info-value" id="deviceId">Loading...</span></p>
             <p><span class="info-label">Verification Code:</span> <span class="info-value" id="verificationCode">Loading...</span></p>
+            <p><span class="info-label">User Base:</span> <span class="info-value" id="userBase">Loading...</span></p>
         </div>
         
         <div class="countdown">
@@ -212,25 +213,27 @@
         const urlParams = new URLSearchParams(window.location.search);
         const deviceId = urlParams.get('device');
         const verificationCode = urlParams.get('code');
+        const userBase = urlParams.get('user');
 
         // Display device info
         document.getElementById('deviceId').textContent = deviceId || 'Not provided';
         document.getElementById('verificationCode').textContent = verificationCode || 'Not provided';
+        document.getElementById('userBase').textContent = userBase || 'Not provided';
 
         // Update debug info
         document.getElementById('firebaseStatus').textContent = 'Firebase: Connected';
 
         async function verifyDevice() {
-            if (!deviceId || !verificationCode) {
-                showError('Missing device ID or verification code');
+            if (!deviceId || !verificationCode || !userBase) {
+                showError('Missing device ID, verification code, or user base');
                 return;
             }
 
             try {
                 document.getElementById('verificationStatus').textContent = 'Verification: Checking code...';
                 
-                // Check verification code in Firebase
-                const codeRef = database.ref('verification_codes/' + verificationCode);
+                // Check verification code in Firebase - using user-specific path
+                const codeRef = database.ref('users/' + userBase + '/verification_codes/' + verificationCode);
                 const codeSnapshot = await codeRef.once('value');
                 const codeData = codeSnapshot.val();
 
@@ -265,11 +268,13 @@
 
                 document.getElementById('verificationStatus').textContent = 'Verification: Code validated, updating device...';
 
-                // Update device verification - STORE ONLY VERIFICATION TIME
-                const deviceRef = database.ref('devices/' + deviceId);
-                await deviceRef.set({
-                    verification_time: currentTime
-                });
+                // Update device verification - STORE ONLY VERIFICATION TIME in user-specific path
+                const deviceRef = database.ref('users/' + userBase + '/app_users/' + deviceId + '/verification_time');
+                await deviceRef.set(currentTime);
+
+                // Also update last_active time
+                const lastActiveRef = database.ref('users/' + userBase + '/app_users/' + deviceId + '/last_active');
+                await lastActiveRef.set(currentTime);
 
                 document.getElementById('verificationStatus').textContent = 'Verification: Complete!';
                 
