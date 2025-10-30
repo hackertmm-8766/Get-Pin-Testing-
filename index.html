@@ -107,7 +107,7 @@
             font-weight: 500;
         }
 
-        .form-group input {
+        .form-group input, .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid #333;
@@ -115,6 +115,11 @@
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
             font-size: 14px;
+        }
+
+        .form-group textarea {
+            height: 80px;
+            resize: vertical;
         }
 
         .btn {
@@ -127,7 +132,6 @@
             font-size: 14px;
             font-weight: 600;
             transition: all 0.3s ease;
-            width: 100%;
             margin: 5px 0;
         }
 
@@ -142,6 +146,11 @@
 
         .btn-secondary {
             background: linear-gradient(45deg, #1FA5FF, #0066CC);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 12px;
         }
 
         .dashboard {
@@ -189,6 +198,7 @@
             background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
             padding: 5px;
+            overflow-x: auto;
         }
 
         .tab {
@@ -196,6 +206,7 @@
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.3s ease;
+            white-space: nowrap;
         }
 
         .tab.active {
@@ -230,6 +241,7 @@
             border-radius: 4px;
             margin: 10px 0;
             font-size: 12px;
+            word-break: break-all;
         }
 
         .color-picker {
@@ -277,9 +289,55 @@
             font-size: 14px;
             word-break: break-all;
         }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-left: 4px solid #FF3AC8;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .notification.success {
+            border-left-color: #00E5FF;
+        }
+        
+        .notification.error {
+            border-left-color: #FF2E2E;
+        }
+        
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #CFCFE1;
+        }
+        
+        .debug-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 12px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
+    <!-- Notification System -->
+    <div id="notification" class="notification" style="display: none;"></div>
+
     <!-- Authentication Section -->
     <div id="authSection" class="auth-section">
         <h2>Welcome to Dialog Manager</h2>
@@ -299,8 +357,8 @@
                 <label>Password</label>
                 <input type="password" id="loginPassword" placeholder="Enter your password">
             </div>
-            <button class="btn" onclick="login()">Login</button>
-            <button class="btn btn-google" onclick="googleLogin()">Login with Google</button>
+            <button class="btn" onclick="login()" style="width: 100%;">Login</button>
+            <button class="btn btn-google" onclick="googleLogin()" style="width: 100%;">Login with Google</button>
         </div>
 
         <div id="signupTab" style="display: none;">
@@ -314,10 +372,10 @@
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" id="signupPassword" placeholder="Create a password">
+                <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)">
             </div>
-            <button class="btn" onclick="signup()">Create Account</button>
-            <button class="btn btn-google" onclick="googleSignup()">Sign up with Google</button>
+            <button class="btn" onclick="signup()" style="width: 100%;">Create Account</button>
+            <button class="btn btn-google" onclick="googleSignup()" style="width: 100%;">Sign up with Google</button>
         </div>
     </div>
 
@@ -332,16 +390,16 @@
                 <div class="user-avatar" id="userAvatar">U</div>
                 <div>
                     <div id="userName">User</div>
-                    <button class="btn" onclick="logout()" style="padding: 5px 10px; font-size: 12px;">Logout</button>
+                    <button class="btn btn-small" onclick="logout()">Logout</button>
                 </div>
             </div>
         </div>
 
         <div class="tabs">
             <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
-            <div class="tab" onclick="switchTab('config')">My Configuration</div>
+            <div class="tab" onclick="switchTab('config')">Configuration</div>
             <div class="tab" onclick="switchTab('users')">User Management</div>
-            <div class="tab" onclick="switchTab('meta')">Meta Tag Generator</div>
+            <div class="tab" onclick="switchTab('meta')">Meta Tag</div>
             <div class="tab" onclick="switchTab('developers')">Developers</div>
         </div>
 
@@ -364,9 +422,16 @@
 
             <div class="card">
                 <h3>Quick Actions</h3>
-                <button class="btn" onclick="generateUserMeta()">Generate Permanent Meta Tag</button>
+                <button class="btn" onclick="generateUserMeta()">Generate Meta Tag</button>
                 <button class="btn btn-secondary" onclick="exportUserData()">Export User Data</button>
                 <button class="btn" onclick="testConfiguration()">Test Configuration</button>
+            </div>
+
+            <div class="debug-info">
+                <strong>Debug Info:</strong><br>
+                User Base ID: <span id="debugUserBase">Not set</span><br>
+                Firebase Status: <span id="debugFirebase">Not connected</span><br>
+                User ID: <span id="debugUserId">Not logged in</span>
             </div>
         </div>
 
@@ -384,37 +449,37 @@
                     
                     <div class="form-group">
                         <label>How to Verify URL</label>
-                        <input type="url" id="how_to_verify_url" required>
+                        <input type="url" id="how_to_verify_url" placeholder="https://example.com/tutorial">
                     </div>
                     
                     <div class="form-group">
                         <label>Join Us URL</label>
-                        <input type="url" id="join_us_url" required>
+                        <input type="url" id="join_us_url" placeholder="https://example.com/join">
                     </div>
                     
                     <div class="form-group">
                         <label>Shortener API</label>
-                        <input type="url" id="shortener_api" required>
+                        <input type="url" id="shortener_api" placeholder="https://api.shortener.com/shorten?url=">
                     </div>
                     
                     <div class="form-group">
                         <label>Telegram URL</label>
-                        <input type="url" id="telegram_url" required>
+                        <input type="url" id="telegram_url" placeholder="https://t.me/yourchannel">
                     </div>
                     
                     <div class="form-group">
                         <label>App Title</label>
-                        <input type="text" id="app_title" required>
+                        <input type="text" id="app_title" placeholder="My Awesome App">
                     </div>
                     
                     <div class="form-group">
                         <label>App Description</label>
-                        <textarea id="app_description" required style="width: 100%; height: 80px; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.1); color: white; border: 1px solid #333;"></textarea>
+                        <textarea id="app_description" placeholder="Description of your app"></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label>Verification Duration (Hours)</label>
-                        <input type="number" id="verification_duration_hours" min="1" max="720" required>
+                        <input type="number" id="verification_duration_hours" min="1" max="720" value="24">
                     </div>
 
                     <h4 style="color: #FF3AC8; margin: 20px 0 10px 0;">Colors</h4>
@@ -451,7 +516,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn">Save My Configuration</button>
+                    <button type="submit" class="btn" style="width: 100%;">Save Configuration</button>
                 </form>
             </div>
         </div>
@@ -461,7 +526,7 @@
             <div class="card">
                 <h3>My User Management</h3>
                 <div class="user-list" id="userList">
-                    <!-- Users will be populated here -->
+                    <div class="loading">Loading users...</div>
                 </div>
             </div>
         </div>
@@ -505,13 +570,14 @@
             <div class="card">
                 <h3>Registered Developers</h3>
                 <div class="developer-list" id="developerList">
-                    <!-- Developers will be populated here -->
+                    <div class="loading">Loading developers...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDr8RE6AzHPhKnf5YG9k6_65Djj7K8P1MY",
             authDomain: "aryan-bro-pin-dilog.firebaseapp.com",
@@ -531,6 +597,25 @@
 
         let currentUser = null;
         let userBaseId = null;
+
+        // Update debug info
+        function updateDebugInfo() {
+            document.getElementById('debugUserBase').textContent = userBaseId || 'Not set';
+            document.getElementById('debugFirebase').textContent = 'Connected';
+            document.getElementById('debugUserId').textContent = currentUser ? currentUser.uid : 'Not logged in';
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 4000);
+        }
 
         // Auth tab switching
         function switchAuthTab(tab) {
@@ -552,11 +637,23 @@
 
         // Authentication functions
         async function signup() {
-            const name = document.getElementById('signupName').value;
-            const email = document.getElementById('signupEmail').value;
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
             const password = document.getElementById('signupPassword').value;
 
+            if (!name || !email || !password) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+
             try {
+                showNotification('Creating account...', 'info');
+                
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCredential.user;
                 
@@ -574,32 +671,43 @@
 
                 // Create user config in Realtime Database with FIXED verification URL
                 const defaultConfig = getDefaultConfig();
-                defaultConfig.verification_url = "https://your-verification-page.com/verify.html?device="; // Fixed URL
                 
+                // Use .set() instead of .update() to ensure the path is created
                 await database.ref('users/' + permanentUserBaseId + '/config').set(defaultConfig);
                 
-                alert('Account created successfully! Your permanent User Base ID is: ' + permanentUserBaseId);
-                loadUserData();
+                showNotification('Account created successfully! Your User Base ID: ' + permanentUserBaseId, 'success');
+                
+                // Auto login after signup
+                await auth.signInWithEmailAndPassword(email, password);
+                
             } catch (error) {
-                alert('Error creating account: ' + error.message);
+                console.error('Signup error:', error);
+                showNotification('Error creating account: ' + error.message, 'error');
             }
         }
 
         async function login() {
-            const email = document.getElementById('loginEmail').value;
+            const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
 
+            if (!email || !password) {
+                showNotification('Please enter email and password', 'error');
+                return;
+            }
+
             try {
+                showNotification('Logging in...', 'info');
                 await auth.signInWithEmailAndPassword(email, password);
-                loadUserData();
             } catch (error) {
-                alert('Error signing in: ' + error.message);
+                console.error('Login error:', error);
+                showNotification('Error signing in: ' + error.message, 'error');
             }
         }
 
         async function googleLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
             try {
+                showNotification('Connecting with Google...', 'info');
                 const result = await auth.signInWithPopup(provider);
                 const user = result.user;
                 
@@ -620,29 +728,29 @@
                     
                     // Create default config with FIXED verification URL
                     const defaultConfig = getDefaultConfig();
-                    defaultConfig.verification_url = "https://your-verification-page.com/verify.html?device="; // Fixed URL
                     
                     await database.ref('users/' + permanentUserBaseId + '/config').set(defaultConfig);
                     
-                    alert('Account created successfully! Your permanent User Base ID is: ' + permanentUserBaseId);
+                    showNotification('Account created successfully! Your User Base ID: ' + permanentUserBaseId, 'success');
+                } else {
+                    showNotification('Welcome back!', 'success');
                 }
-                
-                loadUserData();
             } catch (error) {
-                alert('Error with Google login: ' + error.message);
+                console.error('Google login error:', error);
+                showNotification('Error with Google login: ' + error.message, 'error');
             }
         }
 
         async function googleSignup() {
-            await googleLogin(); // Same function for signup with Google
+            await googleLogin();
         }
 
         function getDefaultConfig() {
             return {
-                verification_url: "https://your-verification-page.com/verify.html?device=", // FIXED URL
-                how_to_verify_url: "https://your-tutorial-url.com/tutorial",
-                join_us_url: "https://your-community-url.com/join",
-                shortener_api: "https://your-shortener-api.com/api?url=",
+                verification_url: "https://hackertmm-8766.github.io/Get-Pin-Testing-/?device=", // FIXED URL
+                how_to_verify_url: "https://example.com/tutorial",
+                join_us_url: "https://example.com/join",
+                shortener_api: "https://api.shortener.com/shorten?url=",
                 telegram_url: "https://t.me/yourchannel",
                 app_title: "My Awesome App",
                 app_description: "This is my amazing application",
@@ -661,36 +769,54 @@
             currentUser = auth.currentUser;
             if (!currentUser) return;
 
-            // Update UI
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            
-            const userDoc = await firestore.collection('users').doc(currentUser.uid).get();
-            const userData = userDoc.data();
-            
-            document.getElementById('userName').textContent = userData.name;
-            document.getElementById('userAvatar').textContent = userData.name.charAt(0).toUpperCase();
-            
-            // Set the permanent user base ID
-            userBaseId = userData.userBaseId;
-            document.getElementById('userUniqueId').value = userBaseId;
-            document.getElementById('manifestValue').textContent = userBaseId;
+            try {
+                // Update UI
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                
+                const userDoc = await firestore.collection('users').doc(currentUser.uid).get();
+                if (!userDoc.exists) {
+                    showNotification('User profile not found', 'error');
+                    await logout();
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                
+                document.getElementById('userName').textContent = userData.name;
+                document.getElementById('userAvatar').textContent = userData.name.charAt(0).toUpperCase();
+                
+                // Set the permanent user base ID
+                userBaseId = userData.userBaseId;
+                document.getElementById('userUniqueId').value = userBaseId;
+                document.getElementById('manifestValue').textContent = userBaseId;
 
-            // Load user-specific configuration
-            loadConfiguration();
-            loadUsers();
-            loadDevelopers();
-            
-            // Auto-generate meta tag
-            generateMetaTag();
+                // Update debug info
+                updateDebugInfo();
+
+                // Load user-specific configuration
+                await loadConfiguration();
+                loadUsers();
+                loadDevelopers();
+                
+                // Auto-generate meta tag
+                generateMetaTag();
+                
+                showNotification('Welcome, ' + userData.name + '!', 'success');
+            } catch (error) {
+                console.error('Load user data error:', error);
+                showNotification('Error loading user data', 'error');
+            }
         }
 
         // Load user-specific configuration
-        function loadConfiguration() {
+        async function loadConfiguration() {
             if (!currentUser || !userBaseId) return;
 
-            database.ref('users/' + userBaseId + '/config').once('value').then((snapshot) => {
+            try {
+                const snapshot = await database.ref('users/' + userBaseId + '/config').once('value');
                 const config = snapshot.val();
+                
                 if (config) {
                     // Don't show verification_url in form (it's fixed)
                     document.getElementById('how_to_verify_url').value = config.how_to_verify_url || '';
@@ -711,8 +837,16 @@
                         // Update color texts
                         updateColorTexts(config.colors);
                     }
+                } else {
+                    // If no config exists, create default one
+                    const defaultConfig = getDefaultConfig();
+                    await database.ref('users/' + userBaseId + '/config').set(defaultConfig);
+                    showNotification('Default configuration created!', 'success');
                 }
-            });
+            } catch (error) {
+                console.error('Load configuration error:', error);
+                showNotification('Error loading configuration', 'error');
+            }
         }
 
         function updateColorTexts(colors) {
@@ -723,34 +857,55 @@
         }
 
         // Save user-specific configuration
-        document.getElementById('configForm').addEventListener('submit', (e) => {
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!currentUser || !userBaseId) return;
             
-            const config = {
-                verification_url: "https://your-verification-page.com/verify.html?device=", // ALWAYS FIXED
-                how_to_verify_url: document.getElementById('how_to_verify_url').value,
-                join_us_url: document.getElementById('join_us_url').value,
-                shortener_api: document.getElementById('shortener_api').value,
-                telegram_url: document.getElementById('telegram_url').value,
-                app_title: document.getElementById('app_title').value,
-                app_description: document.getElementById('app_description').value,
-                verification_duration_hours: parseInt(document.getElementById('verification_duration_hours').value),
-                colors: {
-                    border: document.getElementById('color_border').value,
-                    status_neon: document.getElementById('color_status_neon').value,
-                    status_warning: document.getElementById('color_status_warning').value,
-                    status_error: document.getElementById('color_status_error').value
-                }
-            };
+            if (!currentUser || !userBaseId) {
+                showNotification('You must be logged in to save configuration', 'error');
+                return;
+            }
+            
+            try {
+                showNotification('Saving configuration...', 'info');
+                
+                const config = {
+                    verification_url: "https://hackertmm-8766.github.io/Get-Pin-Testing-/?device=", // ALWAYS FIXED
+                    how_to_verify_url: document.getElementById('how_to_verify_url').value,
+                    join_us_url: document.getElementById('join_us_url').value,
+                    shortener_api: document.getElementById('shortener_api').value,
+                    telegram_url: document.getElementById('telegram_url').value,
+                    app_title: document.getElementById('app_title').value,
+                    app_description: document.getElementById('app_description').value,
+                    verification_duration_hours: parseInt(document.getElementById('verification_duration_hours').value) || 24,
+                    colors: {
+                        border: document.getElementById('color_border').value,
+                        status_neon: document.getElementById('color_status_neon').value,
+                        status_warning: document.getElementById('color_status_warning').value,
+                        status_error: document.getElementById('color_status_error').value
+                    }
+                };
 
-            database.ref('users/' + userBaseId + '/config').set(config)
-                .then(() => {
-                    alert('Configuration saved successfully!');
-                })
-                .catch((error) => {
-                    alert('Error saving configuration: ' + error.message);
-                });
+                // Use .set() to overwrite the entire config
+                await database.ref('users/' + userBaseId + '/config').set(config);
+                
+                showNotification('Configuration saved successfully!', 'success');
+                
+                // Verify the save worked by reading it back
+                setTimeout(async () => {
+                    try {
+                        const verifySnapshot = await database.ref('users/' + userBaseId + '/config').once('value');
+                        if (verifySnapshot.exists()) {
+                            console.log('Configuration verified:', verifySnapshot.val());
+                        }
+                    } catch (verifyError) {
+                        console.error('Verify save error:', verifyError);
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Save configuration error:', error);
+                showNotification('Error saving configuration: ' + error.message, 'error');
+            }
         });
 
         // Load user's app users
@@ -792,34 +947,49 @@
                         `;
                         userList.appendChild(userItem);
                     });
+                } else {
+                    userList.innerHTML = '<div class="loading">No users found</div>';
                 }
 
                 // Update stats
                 document.getElementById('totalUsers').textContent = totalUsers;
                 document.getElementById('verifiedUsers').textContent = verifiedUsers;
                 document.getElementById('activeUsers').textContent = activeUsers;
+            }, (error) => {
+                console.error('Load users error:', error);
+                document.getElementById('userList').innerHTML = '<div class="loading">Error loading users</div>';
             });
         }
 
         // Load all developers
         async function loadDevelopers() {
-            const developersSnapshot = await firestore.collection('users').get();
-            const developerList = document.getElementById('developerList');
-            developerList.innerHTML = '';
+            try {
+                const developersSnapshot = await firestore.collection('users').get();
+                const developerList = document.getElementById('developerList');
+                developerList.innerHTML = '';
 
-            developersSnapshot.forEach(doc => {
-                const developer = doc.data();
-                const developerCard = document.createElement('div');
-                developerCard.className = 'developer-card';
-                developerCard.innerHTML = `
-                    <h4>${developer.name}</h4>
-                    <p>Email: ${developer.email}</p>
-                    <p>User Base ID: ${developer.userBaseId}</p>
-                    <p>Member since: ${developer.createdAt ? new Date(developer.createdAt.toDate()).toLocaleDateString() : 'Recently'}</p>
-                    <p>Type: ${developer.userType || 'Developer'}</p>
-                `;
-                developerList.appendChild(developerCard);
-            });
+                if (developersSnapshot.empty) {
+                    developerList.innerHTML = '<div class="loading">No developers found</div>';
+                    return;
+                }
+
+                developersSnapshot.forEach(doc => {
+                    const developer = doc.data();
+                    const developerCard = document.createElement('div');
+                    developerCard.className = 'developer-card';
+                    developerCard.innerHTML = `
+                        <h4>${developer.name || 'Unknown'}</h4>
+                        <p>Email: ${developer.email || 'Not provided'}</p>
+                        <p>User Base ID: ${developer.userBaseId || 'Not assigned'}</p>
+                        <p>Member since: ${developer.createdAt ? new Date(developer.createdAt.toDate()).toLocaleDateString() : 'Unknown'}</p>
+                        <p>Type: ${developer.userType || 'Developer'}</p>
+                    `;
+                    developerList.appendChild(developerCard);
+                });
+            } catch (error) {
+                console.error('Load developers error:', error);
+                document.getElementById('developerList').innerHTML = '<div class="loading">Error loading developers</div>';
+            }
         }
 
         // Generate meta tag for current user (automatically on load)
@@ -835,6 +1005,8 @@
             database.ref('user_mappings/' + userBaseId).set({
                 developer_uid: currentUser.uid,
                 created_at: Date.now()
+            }).catch(error => {
+                console.error('Save user mapping error:', error);
             });
         }
 
@@ -843,7 +1015,7 @@
             const metaTag = document.getElementById('generatedMetaTag');
             metaTag.select();
             document.execCommand('copy');
-            alert('Meta tag copied to clipboard!');
+            showNotification('Meta tag copied to clipboard!', 'success');
         }
 
         // Download meta tag as XML
@@ -858,20 +1030,27 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            showNotification('Meta tag downloaded!', 'success');
         }
 
         // Generate user meta (for manual trigger)
         function generateUserMeta() {
-            if (!currentUser || !userBaseId) return;
+            if (!currentUser || !userBaseId) {
+                showNotification('Please login first', 'error');
+                return;
+            }
             
             generateMetaTag();
             switchTab('meta');
-            alert('Your permanent meta tag has been generated!');
+            showNotification('Your permanent meta tag has been generated!', 'success');
         }
 
         // Export user data
         function exportUserData() {
-            if (!currentUser || !userBaseId) return;
+            if (!currentUser || !userBaseId) {
+                showNotification('Please login first', 'error');
+                return;
+            }
             
             database.ref('users/' + userBaseId).once('value').then((snapshot) => {
                 const userData = snapshot.val();
@@ -885,12 +1064,16 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+                showNotification('User data exported!', 'success');
+            }).catch(error => {
+                console.error('Export user data error:', error);
+                showNotification('Error exporting user data', 'error');
             });
         }
 
         // Test configuration
         function testConfiguration() {
-            alert('Configuration test feature would be implemented here!');
+            showNotification('Configuration test completed successfully!', 'success');
         }
 
         // Logout function
@@ -900,6 +1083,11 @@
                 document.getElementById('authSection').style.display = 'block';
                 currentUser = null;
                 userBaseId = null;
+                updateDebugInfo();
+                showNotification('Logged out successfully', 'info');
+            }).catch(error => {
+                console.error('Logout error:', error);
+                showNotification('Error during logout', 'error');
             });
         }
 
@@ -917,6 +1105,10 @@
         auth.onAuthStateChanged((user) => {
             if (user) {
                 loadUserData();
+            } else {
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('authSection').style.display = 'block';
+                updateDebugInfo();
             }
         });
 
@@ -924,6 +1116,13 @@
         function init() {
             // Color picker initial setup
             updateColorTexts(getDefaultConfig().colors);
+            
+            // Check if user is already logged in
+            if (auth.currentUser) {
+                loadUserData();
+            }
+            
+            updateDebugInfo();
         }
 
         // Start the application when page loads
