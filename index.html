@@ -3,371 +3,931 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Verification</title>
+    <title>Dialog Manager - Multi-User Platform</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0B0B10 0%, #1a1a2e 100%);
+            color: #fff;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
         }
-        
-        .container {
-            background: white;
-            padding: 40px;
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            max-width: 500px;
-            width: 90%;
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            background: linear-gradient(45deg, #FF3CA6, #8A2BE2, #00E5FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #FF3AC8, #B400FF);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .auth-section {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
             text-align: center;
         }
-        
-        .icon {
-            font-size: 60px;
-            margin-bottom: 20px;
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 5px;
         }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-        
-        .device-info {
-            background: #f8f9fa;
-            padding: 15px;
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            cursor: pointer;
             border-radius: 8px;
-            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .auth-tab.active {
+            background: linear-gradient(45deg, #FF3AC8, #B400FF);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
             text-align: left;
         }
-        
-        .info-label {
-            font-weight: bold;
-            color: #555;
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #CFCFE1;
+            font-weight: 500;
         }
-        
-        .info-value {
-            font-family: monospace;
-            color: #4a00e0;
-            word-break: break-all;
-        }
-        
-        .status-box {
-            padding: 20px;
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
             border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #4a00e0;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
         }
-        
-        .status-loading {
-            background: #fff3cd;
-            color: #856404;
-            border-left-color: #ffc107;
-        }
-        
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border-left-color: #28a745;
-        }
-        
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left-color: #dc3545;
-        }
-        
-        .status-warning {
-            background: #fff3cd;
-            color: #856404;
-            border-left-color: #ffc107;
-        }
-        
-        .countdown {
-            font-size: 16px;
-            color: #666;
-            margin: 20px 0;
-        }
-        
-        .progress {
-            height: 6px;
-            background: #e9ecef;
-            border-radius: 3px;
-            margin: 25px 0;
-            overflow: hidden;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            background: #28a745;
-            width: 0%;
-            transition: width 3s linear;
-        }
-        
+
         .btn {
-            background: #dc3545;
+            background: linear-gradient(45deg, #FF3AC8, #B400FF);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 16px;
+            padding: 12px 25px;
+            border-radius: 8px;
             cursor: pointer;
-            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 58, 200, 0.4);
+        }
+
+        .btn-google {
+            background: linear-gradient(45deg, #4285F4, #34A853);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #1FA5FF, #0066CC);
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            color: #FF3AC8;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #FF3CA6, #8A2BE2);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .tab {
+            padding: 12px 25px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: linear-gradient(45deg, #FF3AC8, #B400FF);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .user-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #FF3AC8;
+        }
+
+        .user-meta {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .color-picker input {
+            width: 60px !important;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .developer-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .developer-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00E5FF;
         }
         
-        .hidden {
-            display: none;
+        .permanent-badge {
+            background: linear-gradient(45deg, #FF3AC8, #B400FF);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .fixed-url {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Loading State -->
-        <div id="loadingState">
-            <div class="icon">⏳</div>
-            <h1>Verifying Your Device</h1>
-            <div class="status-box status-loading">
-                <p>Checking verification code...</p>
+    <!-- Authentication Section -->
+    <div id="authSection" class="auth-section">
+        <h2>Welcome to Dialog Manager</h2>
+        <p>Manage your Android dialog configurations</p>
+        
+        <div class="auth-tabs">
+            <div class="auth-tab active" onclick="switchAuthTab('login')">Login</div>
+            <div class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</div>
+        </div>
+
+        <div id="loginTab">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter your password">
+            </div>
+            <button class="btn" onclick="login()">Login</button>
+            <button class="btn btn-google" onclick="googleLogin()">Login with Google</button>
+        </div>
+
+        <div id="signupTab" style="display: none;">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="signupName" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="signupEmail" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="signupPassword" placeholder="Create a password">
+            </div>
+            <button class="btn" onclick="signup()">Create Account</button>
+            <button class="btn btn-google" onclick="googleSignup()">Sign up with Google</button>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="dashboard container">
+        <div class="header">
+            <div>
+                <h1>Dialog Manager</h1>
+                <p>Multi-User Management Platform</p>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div>
+                    <div id="userName">User</div>
+                    <button class="btn" onclick="logout()" style="padding: 5px 10px; font-size: 12px;">Logout</button>
+                </div>
             </div>
         </div>
-        
-        <!-- Success State -->
-        <div id="successState" class="hidden">
-            <div class="icon">✅</div>
-            <h1>Device Verified!</h1>
-            <div class="status-box status-success">
-                <p>Your device has been successfully verified!</p>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
+            <div class="tab" onclick="switchTab('config')">My Configuration</div>
+            <div class="tab" onclick="switchTab('users')">User Management</div>
+            <div class="tab" onclick="switchTab('meta')">Meta Tag Generator</div>
+            <div class="tab" onclick="switchTab('developers')">Developers</div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboardTab" class="tab-content active">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div>Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="verifiedUsers">0</div>
+                    <div>Verified Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeUsers">0</div>
+                    <div>Active Today</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Quick Actions</h3>
+                <button class="btn" onclick="generateUserMeta()">Generate Permanent Meta Tag</button>
+                <button class="btn btn-secondary" onclick="exportUserData()">Export User Data</button>
+                <button class="btn" onclick="testConfiguration()">Test Configuration</button>
             </div>
         </div>
-        
-        <!-- Error State -->
-        <div id="errorState" class="hidden">
-            <div class="icon">❌</div>
-            <h1>Verification Failed</h1>
-            <div class="status-box status-error">
-                <p id="errorMessage">There was an error verifying your device.</p>
+
+        <!-- Configuration Tab -->
+        <div id="configTab" class="tab-content">
+            <div class="card">
+                <h3>My Dialog Configuration</h3>
+                <form id="configForm">
+                    <!-- Fixed Verification URL - Not Editable -->
+                    <div class="form-group">
+                        <label>Verification URL <span class="permanent-badge">Fixed</span></label>
+                        <div class="fixed-url">https://hackertmm-8766.github.io/Get-Pin-Testing-/verification.html?device={device}&code={code}&user={userBase}</div>
+                        <small style="color: #A9A9B8;">This URL is fixed and cannot be changed</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>How to Verify URL</label>
+                        <input type="url" id="how_to_verify_url" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Join Us URL</label>
+                        <input type="url" id="join_us_url" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Shortener API</label>
+                        <input type="url" id="shortener_api" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Telegram URL</label>
+                        <input type="url" id="telegram_url" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>App Title</label>
+                        <input type="text" id="app_title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>App Description</label>
+                        <textarea id="app_description" required style="width: 100%; height: 80px; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.1); color: white; border: 1px solid #333;"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Verification Duration (Hours)</label>
+                        <input type="number" id="verification_duration_hours" min="1" max="720" required>
+                    </div>
+
+                    <h4 style="color: #FF3AC8; margin: 20px 0 10px 0;">Colors</h4>
+                    
+                    <div class="form-group">
+                        <label>Border Color</label>
+                        <div class="color-picker">
+                            <input type="color" id="color_border" value="#FF3CA6">
+                            <span id="color_border_text">#FF3CA6</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Status Neon Color</label>
+                        <div class="color-picker">
+                            <input type="color" id="color_status_neon" value="#00E5FF">
+                            <span id="color_status_neon_text">#00E5FF</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Status Warning Color</label>
+                        <div class="color-picker">
+                            <input type="color" id="color_status_warning" value="#FFB800">
+                            <span id="color_status_warning_text">#FFB800</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Status Error Color</label>
+                        <div class="color-picker">
+                            <input type="color" id="color_status_error" value="#FF2E2E">
+                            <span id="color_status_error_text">#FF2E2E</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">Save My Configuration</button>
+                </form>
             </div>
         </div>
-        
-        <!-- Fake Access Detected -->
-        <div id="fakeAccessState" class="hidden">
-            <div class="icon">🚫</div>
-            <h1>Security Alert</h1>
-            <div class="status-box status-error">
-                <p>You are trying to use a verification code that has already been used!</p>
-                <p style="margin-top: 10px; font-size: 14px;">Each verification code can only be used once.</p>
+
+        <!-- User Management Tab -->
+        <div id="usersTab" class="tab-content">
+            <div class="card">
+                <h3>My User Management</h3>
+                <div class="user-list" id="userList">
+                    <!-- Users will be populated here -->
+                </div>
             </div>
         </div>
-        
-        <!-- Device Info -->
-        <div class="device-info">
-            <p><span class="info-label">Device ID:</span> <span class="info-value" id="deviceId">Loading...</span></p>
-            <p><span class="info-label">Verification Code:</span> <span class="info-value" id="verificationCode">Loading...</span></p>
-            <p><span class="info-label">User Base:</span> <span class="info-value" id="userBase">Loading...</span></p>
+
+        <!-- Meta Tag Generator Tab -->
+        <div id="metaTab" class="tab-content">
+            <div class="card">
+                <h3>Permanent Meta Tag Generator</h3>
+                <div class="form-group">
+                    <label>Your Permanent User Base ID <span class="permanent-badge">Auto-Generated</span></label>
+                    <input type="text" id="userUniqueId" readonly style="background: rgba(255,255,255,0.2);">
+                    <small style="color: #A9A9B8;">This ID is permanent and cannot be changed</small>
+                </div>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Generated Meta Tag <span class="permanent-badge">Permanent</span></label>
+                    <textarea id="generatedMetaTag" readonly style="width: 100%; height: 80px; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.1); color: white; border: 1px solid #333; font-family: monospace;"></textarea>
+                    <small style="color: #A9A9B8;">Add this meta tag to your AndroidManifest.xml. It's permanent and cannot be changed.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Quick Actions</label>
+                    <button class="btn" onclick="copyMetaTag()">Copy Meta Tag</button>
+                    <button class="btn btn-secondary" onclick="downloadMetaTag()">Download as XML</button>
+                </div>
+                
+                <div class="card" style="margin-top: 20px; background: rgba(255,255,255,0.02);">
+                    <h4>📱 How to Use in Android App</h4>
+                    <p style="margin: 10px 0; font-size: 14px; color: #CFCFE1;">Add this to your <code>AndroidManifest.xml</code> inside the <code>&lt;application&gt;</code> tag:</p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px; font-family: monospace; font-size: 13px; margin: 10px 0;">
+                        &lt;meta-data<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;android:name="config_ch"<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;android:value="<span id="manifestValue">YOUR_USER_BASE_ID</span>" /&gt;
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="countdown">
-            This tab will close in <span id="countdown">3</span> seconds
-        </div>
-        
-        <div class="progress">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-        
-        <button class="btn" id="closeBtn">Close Tab Now</button>
-        
-        <div id="debugInfo" style="font-size: 12px; color: #666; margin-top: 20px; text-align: left;">
-            <p><strong>Debug Info:</strong></p>
-            <p id="firebaseStatus">Firebase: Connecting...</p>
-            <p id="verificationStatus">Verification: Not started</p>
+
+        <!-- Developers Tab -->
+        <div id="developersTab" class="tab-content">
+            <div class="card">
+                <h3>Registered Developers</h3>
+                <div class="developer-list" id="developerList">
+                    <!-- Developers will be populated here -->
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        // Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyDr8RE6AzHPhKnf5YG9k6_65Djj7K8P1MY",
+            apiKey: "your-api-key",
             authDomain: "aryan-bro-pin-dilog.firebaseapp.com",
             databaseURL: "https://aryan-bro-pin-dilog-default-rtdb.firebaseio.com",
             projectId: "aryan-bro-pin-dilog",
-            storageBucket: "aryan-bro-pin-dilog.firebasestorage.app",
-            messagingSenderId: "883297799795",
-            appId: "1:883297799795:web:8409ddfb4217167abc2406",
-            measurementId: "G-7EZ8CQK559"
+            storageBucket: "aryan-bro-pin-dilog.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
         };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
         const database = firebase.database();
+        const firestore = firebase.firestore();
 
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const deviceId = urlParams.get('device');
-        const verificationCode = urlParams.get('code');
-        const userBase = urlParams.get('user');
+        let currentUser = null;
+        let userBaseId = null;
 
-        // Display device info
-        document.getElementById('deviceId').textContent = deviceId || 'Not provided';
-        document.getElementById('verificationCode').textContent = verificationCode || 'Not provided';
-        document.getElementById('userBase').textContent = userBase || 'Not provided';
+        // Auth tab switching
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('loginTab').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('signupTab').style.display = tab === 'signup' ? 'block' : 'none';
+            document.querySelector(`.auth-tab:nth-child(${tab === 'login' ? 1 : 2})`).classList.add('active');
+        }
 
-        // Update debug info
-        document.getElementById('firebaseStatus').textContent = 'Firebase: Connected';
+        // Main tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            const tabIndex = ['dashboard', 'config', 'users', 'meta', 'developers'].indexOf(tabName);
+            document.querySelectorAll('.tab')[tabIndex].classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
 
-        async function verifyDevice() {
-            if (!deviceId || !verificationCode || !userBase) {
-                showError('Missing device ID, verification code, or user base');
+        // Authentication functions
+        async function signup() {
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                // Generate permanent user base ID
+                const permanentUserBaseId = 'USER_' + user.uid.substring(0, 8).toUpperCase() + '_' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                
+                // Create user profile in Firestore
+                await firestore.collection('users').doc(user.uid).set({
+                    name: name,
+                    email: email,
+                    userBaseId: permanentUserBaseId,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    userType: 'developer'
+                });
+
+                // Create user config in Realtime Database with FIXED verification URL
+                const defaultConfig = getDefaultConfig();
+                defaultConfig.verification_url = "https://your-verification-page.com/verify.html?device="; // Fixed URL
+                
+                await database.ref('users/' + permanentUserBaseId + '/config').set(defaultConfig);
+                
+                alert('Account created successfully! Your permanent User Base ID is: ' + permanentUserBaseId);
+                loadUserData();
+            } catch (error) {
+                alert('Error creating account: ' + error.message);
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                loadUserData();
+            } catch (error) {
+                alert('Error signing in: ' + error.message);
+            }
+        }
+
+        async function googleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                const result = await auth.signInWithPopup(provider);
+                const user = result.user;
+                
+                // Check if user exists in Firestore
+                const userDoc = await firestore.collection('users').doc(user.uid).get();
+                if (!userDoc.exists) {
+                    // Generate permanent user base ID for new Google user
+                    const permanentUserBaseId = 'USER_' + user.uid.substring(0, 8).toUpperCase() + '_' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                    
+                    // Create new user profile
+                    await firestore.collection('users').doc(user.uid).set({
+                        name: user.displayName,
+                        email: user.email,
+                        userBaseId: permanentUserBaseId,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        userType: 'developer'
+                    });
+                    
+                    // Create default config with FIXED verification URL
+                    const defaultConfig = getDefaultConfig();
+                    defaultConfig.verification_url = "https://your-verification-page.com/verify.html?device="; // Fixed URL
+                    
+                    await database.ref('users/' + permanentUserBaseId + '/config').set(defaultConfig);
+                    
+                    alert('Account created successfully! Your permanent User Base ID is: ' + permanentUserBaseId);
+                }
+                
+                loadUserData();
+            } catch (error) {
+                alert('Error with Google login: ' + error.message);
+            }
+        }
+
+        async function googleSignup() {
+            await googleLogin(); // Same function for signup with Google
+        }
+
+        function getDefaultConfig() {
+            return {
+                verification_url: "https://your-verification-page.com/verify.html?device=", // FIXED URL
+                how_to_verify_url: "https://your-tutorial-url.com/tutorial",
+                join_us_url: "https://your-community-url.com/join",
+                shortener_api: "https://your-shortener-api.com/api?url=",
+                telegram_url: "https://t.me/yourchannel",
+                app_title: "My Awesome App",
+                app_description: "This is my amazing application",
+                verification_duration_hours: 24,
+                colors: {
+                    border: "#FF3CA6",
+                    status_neon: "#00E5FF",
+                    status_warning: "#FFB800",
+                    status_error: "#FF2E2E"
+                }
+            };
+        }
+
+        // Load user data after authentication
+        async function loadUserData() {
+            currentUser = auth.currentUser;
+            if (!currentUser) return;
+
+            // Update UI
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            const userDoc = await firestore.collection('users').doc(currentUser.uid).get();
+            const userData = userDoc.data();
+            
+            document.getElementById('userName').textContent = userData.name;
+            document.getElementById('userAvatar').textContent = userData.name.charAt(0).toUpperCase();
+            
+            // Set the permanent user base ID
+            userBaseId = userData.userBaseId;
+            document.getElementById('userUniqueId').value = userBaseId;
+            document.getElementById('manifestValue').textContent = userBaseId;
+
+            // Load user-specific configuration
+            loadConfiguration();
+            loadUsers();
+            loadDevelopers();
+            
+            // Auto-generate meta tag
+            generateMetaTag();
+        }
+
+        // Load user-specific configuration
+        function loadConfiguration() {
+            if (!currentUser || !userBaseId) return;
+
+            database.ref('users/' + userBaseId + '/config').once('value').then((snapshot) => {
+                const config = snapshot.val();
+                if (config) {
+                    // Don't show verification_url in form (it's fixed)
+                    document.getElementById('how_to_verify_url').value = config.how_to_verify_url || '';
+                    document.getElementById('join_us_url').value = config.join_us_url || '';
+                    document.getElementById('shortener_api').value = config.shortener_api || '';
+                    document.getElementById('telegram_url').value = config.telegram_url || '';
+                    document.getElementById('app_title').value = config.app_title || '';
+                    document.getElementById('app_description').value = config.app_description || '';
+                    document.getElementById('verification_duration_hours').value = config.verification_duration_hours || 24;
+                    
+                    // Set colors
+                    if (config.colors) {
+                        document.getElementById('color_border').value = config.colors.border || '#FF3CA6';
+                        document.getElementById('color_status_neon').value = config.colors.status_neon || '#00E5FF';
+                        document.getElementById('color_status_warning').value = config.colors.status_warning || '#FFB800';
+                        document.getElementById('color_status_error').value = config.colors.status_error || '#FF2E2E';
+                        
+                        // Update color texts
+                        updateColorTexts(config.colors);
+                    }
+                }
+            });
+        }
+
+        function updateColorTexts(colors) {
+            document.getElementById('color_border_text').textContent = colors.border || '#FF3CA6';
+            document.getElementById('color_status_neon_text').textContent = colors.status_neon || '#00E5FF';
+            document.getElementById('color_status_warning_text').textContent = colors.status_warning || '#FFB800';
+            document.getElementById('color_status_error_text').textContent = colors.status_error || '#FF2E2E';
+        }
+
+        // Save user-specific configuration
+        document.getElementById('configForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!currentUser || !userBaseId) return;
+            
+            const config = {
+                verification_url: "https://your-verification-page.com/verify.html?device=", // ALWAYS FIXED
+                how_to_verify_url: document.getElementById('how_to_verify_url').value,
+                join_us_url: document.getElementById('join_us_url').value,
+                shortener_api: document.getElementById('shortener_api').value,
+                telegram_url: document.getElementById('telegram_url').value,
+                app_title: document.getElementById('app_title').value,
+                app_description: document.getElementById('app_description').value,
+                verification_duration_hours: parseInt(document.getElementById('verification_duration_hours').value),
+                colors: {
+                    border: document.getElementById('color_border').value,
+                    status_neon: document.getElementById('color_status_neon').value,
+                    status_warning: document.getElementById('color_status_warning').value,
+                    status_error: document.getElementById('color_status_error').value
+                }
+            };
+
+            database.ref('users/' + userBaseId + '/config').set(config)
+                .then(() => {
+                    alert('Configuration saved successfully!');
+                })
+                .catch((error) => {
+                    alert('Error saving configuration: ' + error.message);
+                });
+        });
+
+        // Load user's app users
+        function loadUsers() {
+            if (!currentUser || !userBaseId) return;
+
+            database.ref('users/' + userBaseId + '/app_users').on('value', (snapshot) => {
+                const users = snapshot.val();
+                const userList = document.getElementById('userList');
+                
+                userList.innerHTML = '';
+                
+                let totalUsers = 0;
+                let verifiedUsers = 0;
+                let activeUsers = 0;
+                const today = new Date().toDateString();
+
+                if (users) {
+                    Object.entries(users).forEach(([userId, userData]) => {
+                        totalUsers++;
+                        
+                        if (userData.verification_time) {
+                            verifiedUsers++;
+                        }
+                        
+                        if (userData.last_active && new Date(userData.last_active).toDateString() === today) {
+                            activeUsers++;
+                        }
+                        
+                        const userItem = document.createElement('div');
+                        userItem.className = 'user-item';
+                        userItem.innerHTML = `
+                            <strong>Device ID: ${userId}</strong>
+                            <div>Status: <span style="color: ${userData.verification_time ? '#00E5FF' : '#FFB800'}">
+                                ${userData.verification_time ? 'Verified' : 'Pending'}
+                            </span></div>
+                            <div>Last Active: ${userData.last_active ? new Date(userData.last_active).toLocaleString() : 'Never'}</div>
+                            <div>Created: ${userData.created_at ? new Date(userData.created_at).toLocaleString() : 'Unknown'}</div>
+                        `;
+                        userList.appendChild(userItem);
+                    });
+                }
+
+                // Update stats
+                document.getElementById('totalUsers').textContent = totalUsers;
+                document.getElementById('verifiedUsers').textContent = verifiedUsers;
+                document.getElementById('activeUsers').textContent = activeUsers;
+            });
+        }
+
+        // Load all developers
+        async function loadDevelopers() {
+            const developersSnapshot = await firestore.collection('users').get();
+            const developerList = document.getElementById('developerList');
+            developerList.innerHTML = '';
+
+            developersSnapshot.forEach(doc => {
+                const developer = doc.data();
+                const developerCard = document.createElement('div');
+                developerCard.className = 'developer-card';
+                developerCard.innerHTML = `
+                    <h4>${developer.name}</h4>
+                    <p>Email: ${developer.email}</p>
+                    <p>User Base ID: ${developer.userBaseId}</p>
+                    <p>Member since: ${developer.createdAt ? new Date(developer.createdAt.toDate()).toLocaleDateString() : 'Recently'}</p>
+                    <p>Type: ${developer.userType || 'Developer'}</p>
+                `;
+                developerList.appendChild(developerCard);
+            });
+        }
+
+        // Generate meta tag for current user (automatically on load)
+        function generateMetaTag() {
+            if (!currentUser || !userBaseId) {
                 return;
             }
 
-            try {
-                document.getElementById('verificationStatus').textContent = 'Verification: Checking code...';
-                
-                // Check verification code in Firebase - using user-specific path
-                const codeRef = database.ref('users/' + userBase + '/verification_codes/' + verificationCode);
-                const codeSnapshot = await codeRef.once('value');
-                const codeData = codeSnapshot.val();
+            const metaTag = `<meta-data\n    android:name="config_ch"\n    android:value="${userBaseId}" />`;
+            document.getElementById('generatedMetaTag').value = metaTag;
 
-                if (!codeData) {
-                    showError('Invalid verification code');
-                    return;
-                }
-
-                if (codeData.used === true) {
-                    // Code already used - show fake access message
-                    showFakeAccess();
-                    return;
-                }
-
-                if (codeData.deviceId !== deviceId) {
-                    showError('Verification code does not match device');
-                    return;
-                }
-
-                // Check if code is expired (10 minutes)
-                const currentTime = new Date().getTime();
-                if (codeData.expires_at && currentTime > codeData.expires_at) {
-                    showError('Verification code has expired');
-                    return;
-                }
-
-                // Mark code as used
-                await codeRef.update({
-                    used: true,
-                    used_at: currentTime
-                });
-
-                document.getElementById('verificationStatus').textContent = 'Verification: Code validated, updating device...';
-
-                // Update device verification - STORE ONLY VERIFICATION TIME in user-specific path
-                const deviceRef = database.ref('users/' + userBase + '/app_users/' + deviceId + '/verification_time');
-                await deviceRef.set(currentTime);
-
-                // Also update last_active time
-                const lastActiveRef = database.ref('users/' + userBase + '/app_users/' + deviceId + '/last_active');
-                await lastActiveRef.set(currentTime);
-
-                document.getElementById('verificationStatus').textContent = 'Verification: Complete!';
-                
-                // Show success and start countdown
-                showSuccess();
-                startCountdown(3);
-
-            } catch (error) {
-                console.error('Verification error:', error);
-                showError('Error during verification: ' + error.message);
-            }
+            // Store the mapping in database
+            database.ref('user_mappings/' + userBaseId).set({
+                developer_uid: currentUser.uid,
+                created_at: Date.now()
+            });
         }
 
-        function showLoading() {
-            document.getElementById('loadingState').classList.remove('hidden');
-            document.getElementById('successState').classList.add('hidden');
-            document.getElementById('errorState').classList.add('hidden');
-            document.getElementById('fakeAccessState').classList.add('hidden');
+        // Copy meta tag to clipboard
+        function copyMetaTag() {
+            const metaTag = document.getElementById('generatedMetaTag');
+            metaTag.select();
+            document.execCommand('copy');
+            alert('Meta tag copied to clipboard!');
         }
 
-        function showSuccess() {
-            document.getElementById('loadingState').classList.add('hidden');
-            document.getElementById('successState').classList.remove('hidden');
-            document.getElementById('errorState').classList.add('hidden');
-            document.getElementById('fakeAccessState').classList.add('hidden');
+        // Download meta tag as XML
+        function downloadMetaTag() {
+            const metaTag = document.getElementById('generatedMetaTag').value;
+            const blob = new Blob([metaTag], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'meta_tag.xml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
-        function showError(message) {
-            document.getElementById('loadingState').classList.add('hidden');
-            document.getElementById('successState').classList.add('hidden');
-            document.getElementById('errorState').classList.remove('hidden');
-            document.getElementById('fakeAccessState').classList.add('hidden');
-            document.getElementById('errorMessage').textContent = message;
-            startCountdown(5);
-        }
-
-        function showFakeAccess() {
-            document.getElementById('loadingState').classList.add('hidden');
-            document.getElementById('successState').classList.add('hidden');
-            document.getElementById('errorState').classList.add('hidden');
-            document.getElementById('fakeAccessState').classList.remove('hidden');
-            startCountdown(5);
-        }
-
-        function startCountdown(seconds) {
-            const countdownElement = document.getElementById('countdown');
-            const progressBar = document.getElementById('progressBar');
-            const closeBtn = document.getElementById('closeBtn');
-
-            // Reset progress bar
-            progressBar.style.transition = 'none';
-            progressBar.style.width = '0%';
+        // Generate user meta (for manual trigger)
+        function generateUserMeta() {
+            if (!currentUser || !userBaseId) return;
             
-            setTimeout(() => {
-                progressBar.style.transition = `width ${seconds}s linear`;
-                progressBar.style.width = '100%';
-            }, 100);
-
-            let countdown = seconds;
-            countdownElement.textContent = countdown;
-
-            const interval = setInterval(() => {
-                countdown--;
-                countdownElement.textContent = countdown;
-
-                if (countdown <= 0) {
-                    clearInterval(interval);
-                    closeTab();
-                }
-            }, 1000);
-
-            // Show close button
-            closeBtn.style.display = 'block';
-            closeBtn.onclick = closeTab;
+            generateMetaTag();
+            switchTab('meta');
+            alert('Your permanent meta tag has been generated!');
         }
 
-        function closeTab() {
-            // Multiple methods to ensure tab closes
-            try {
-                window.open('', '_self').close();
-            } catch (e) {
-                try {
-                    window.location.href = 'about:blank';
-                } catch (e2) {
-                    document.body.innerHTML = '<div style="text-align:center;padding:50px;"><h2>Verification Complete</h2><p>You can close this tab.</p></div>';
-                }
-            }
+        // Export user data
+        function exportUserData() {
+            if (!currentUser || !userBaseId) return;
+            
+            database.ref('users/' + userBaseId).once('value').then((snapshot) => {
+                const userData = snapshot.val();
+                const dataStr = JSON.stringify(userData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'my_user_data.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
         }
 
-        // Start verification when page loads
-        window.addEventListener('load', () => {
-            setTimeout(verifyDevice, 1000);
+        // Test configuration
+        function testConfiguration() {
+            alert('Configuration test feature would be implemented here!');
+        }
+
+        // Logout function
+        function logout() {
+            auth.signOut().then(() => {
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('authSection').style.display = 'block';
+                currentUser = null;
+                userBaseId = null;
+            });
+        }
+
+        // Color picker handlers
+        document.querySelectorAll('input[type="color"]').forEach(picker => {
+            picker.addEventListener('input', (e) => {
+                const textElement = document.getElementById(e.target.id + '_text');
+                if (textElement) {
+                    textElement.textContent = e.target.value;
+                }
+            });
         });
+
+        // Initialize auth state listener
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                loadUserData();
+            }
+        });
+
+        // Initialize the application
+        function init() {
+            // Color picker initial setup
+            updateColorTexts(getDefaultConfig().colors);
+        }
+
+        // Start the application when page loads
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
